@@ -208,7 +208,7 @@
 
                             const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
 
-                            // Aquí está el enlace corregido (Trazar ruta de Google Maps)
+                            // ¡ENLACE CORREGIDO! Usa la API de rutas de Google Maps
                             const popupContent = `
                                 <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
                                 <div class="popup-body">
@@ -220,7 +220,7 @@
                                     ${curpHTML}
                                     <div class="popup-item">
                                         <span class="popup-icon">📍</span>
-                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link" title="Abrir ruta en Google Maps">${direccion}</a></span>
+                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link" title="Cómo llegar en Google Maps">${direccion}</a></span>
                                     </div>
                                     <div class="popup-item">
                                         <span class="popup-icon">📞</span>
@@ -276,7 +276,6 @@
                             const coordenadas = markerEncontrado.getLatLng();
                             map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 }); 
                             
-                            // Si estamos en celular, esto quita el teclado
                             if(document.activeElement) document.activeElement.blur(); 
 
                             setTimeout(() => { markerEncontrado.openPopup(); }, 1500); 
