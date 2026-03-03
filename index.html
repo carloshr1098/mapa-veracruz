@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Oficialías - Veracruz</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; }
+        header { background-color: #6a1b31; color: white; padding: 1rem; text-align: center; height: 60px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        header h1 { margin: 0; font-size: 1.5rem; }
+        main { height: calc(100vh - 60px); width: 100%; position: relative; }
+        #map-container { height: 100%; width: 100%; z-index: 1; }
+        
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.9); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; font-weight: bold; color: #6a1b31; }
+
+        .search-box { position: absolute; top: 20px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 10px; }
+        .search-box label { color: #6a1b31; font-weight: bold; font-size: 0.9rem; }
+        .search-box input { padding: 10px 15px; font-size: 1rem; border: 2px solid #ccc; border-radius: 5px; width: 250px; outline: none; transition: border-color 0.3s; }
+        .search-box input:focus { border-color: #6a1b31; }
+
+        #btn-reset { position: absolute; bottom: 30px; left: 20px; z-index: 1000; padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; }
+        #btn-reset:hover { background: #8a2542; }
+
+        .custom-popup .leaflet-popup-content-wrapper { border-radius: 8px; padding: 0; overflow: hidden; }
+        .custom-popup .leaflet-popup-content { margin: 0; width: 280px !important; }
+        .popup-header { background-color: #6a1b31; color: white; padding: 10px 15px; font-size: 1.1em; font-weight: bold; }
+        .popup-body { padding: 15px; font-size: 0.9em; color: #333; }
+        .popup-item { margin-bottom: 8px; display: flex; align-items: flex-start; }
+        .popup-icon { margin-right: 10px; font-size: 1.2em; }
+        .popup-link { color: #007bff; text-decoration: none; word-break: break-all; }
+        .popup-link:hover { text-decoration: underline; }
+        .popup-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #6a1b31; margin: 10px auto 15px auto; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .custom-pin { background: transparent; border: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Directorio de Oficialías - Veracruz</h1>
+    </header>
+
+    <main>
+        <div class="search-box">
+            <label for="buscador">Buscar Oficialía:</label>
+            <input type="text" id="buscador" placeholder="Escribe un municipio..." list="lista-municipios" autocomplete="off">
+            <datalist id="lista-municipios"></datalist>
+        </div>
+
+        <button id="btn-reset">🗺️ Ver todo Veracruz</button>
+
+        <div id="loading">Cargando mapa oficial de Veracruz...</div>
+        <div id="map-container"></div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const map = L.map('map-container', { minZoom: 6, maxZoom: 18 });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OSM'
+            }).addTo(map);
+
+            let veracruzBounds;  
+            const grupoOficialias = L.layerGroup(); 
+            const NIVEL_ZOOM_VISIBLE = 10; 
+            let diccMarcadores = {}; 
+
+            const urlPoligonoVeracruz = 'https://nominatim.openstreetmap.org/search?state=Veracruz&country=Mexico&polygon_geojson=1&format=json';
+
+            fetch(urlPoligonoVeracruz)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none'; 
+                    const veracruzGeoJSON = data[0].geojson; 
+                    
+                    const polygonStyle = { color: "#6a1b31", weight: 2, opacity: 0.8, fillColor: "#6a1b31", fillOpacity: 0.15 };
+                    const geoJsonLayer = L.geoJSON(veracruzGeoJSON, { style: polygonStyle }).addTo(map);
+
+                    veracruzBounds = geoJsonLayer.getBounds();
+                    map.fitBounds(veracruzBounds);
+                    map.setMaxBounds(veracruzBounds.pad(0.2)); 
+                })
+                .catch(error => { console.error("Error al cargar el polígono:", error); });
+
+            fetch('csvjson.json')
+                .then(response => response.json())
+                .then(datos => {
+                    const datalist = document.getElementById('lista-municipios');
+
+                    datos.forEach(item => {
+                        const nombre = item.MUNICIPIO || item.municipio;
+                        const direccion = item.DIRECCION || item.direccion || "Sin dirección";
+                        
+                        let telefonoRaw = item.telefono || item.Telefono || "No disponible";
+                        let telefonoDisplay = String(telefonoRaw).replace(/\n/g, '<br>'); 
+                        let soloNumeros = String(telefonoRaw).replace(/\D/g, ''); 
+                        let telefonoHTML = "";
+                        
+                        if (soloNumeros.length >= 7) {
+                            telefonoHTML = `<a href="tel:${soloNumeros}" class="popup-link">${telefonoDisplay}</a>`;
+                        } else {
+                            telefonoHTML = `<span>${telefonoDisplay}</span>`;
+                        }
+
+                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Oficial no asignado";
+                        const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
+                        
+                        let fotoTexto = item.FOTO || item.Foto || item.foto || "";
+                        let imagenHTML = "";
+                        if (fotoTexto !== "" && fotoTexto.toLowerCase() !== "sin foto") {
+                            if (fotoTexto.includes('src="')) {
+                                const match = fotoTexto.match(/src="([^"]+)"/);
+                                if (match) fotoTexto = match[1];
+                            }
+                            imagenHTML = `<img src="${fotoTexto}" alt="Foto de ${oficial}" class="popup-avatar" onerror="this.style.display='none'">`;
+                        }
+
+                        let lat, lng;
+                        const textoCoordenada = item.Coordenadas || item.coordenadas || item.Latitude || item.Longitude || item.COORDENADAS;
+                        
+                        if (textoCoordenada && typeof textoCoordenada === 'string' && textoCoordenada.includes(',')) {
+                            const partes = textoCoordenada.split(',');
+                            lat = parseFloat(partes[0].trim());
+                            lng = parseFloat(partes[1].trim());
+                        } else {
+                            lat = parseFloat(item.Latitude || item.lat);
+                            lng = parseFloat(item.Longitude || item.lng);
+                        }
+
+                        if(nombre && lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                            
+                            let tieneCurp = String(item["MODULO CURP"] || item["Modulo CURP"] || item.curp || "NO").trim().toUpperCase();
+                            let tieneBiometrico = String(item["BIOMETRICO"] || item["Biometrico"] || item.biometrico || "NO").trim().toUpperCase();
+
+                            let colorHex = "";     
+                            let curpHTML = "";     
+
+                            // CONDICIÓN A: Tiene ambos (CURP y Biométrico) - Dorado
+                            if (tieneCurp === "SI" && tieneBiometrico === "SI") {
+                                colorHex = "#BD9556"; 
+                                curpHTML = `
+                                    <div class="popup-item">
+                                        <span class="popup-icon">✅</span>
+                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span>
+                                    </div>
+                                    <div class="popup-item">
+                                        <span class="popup-icon">👁️</span>
+                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo Biométrico</span>
+                                    </div>
+                                `;
+                            } 
+                            // CONDICIÓN B: Solo tiene CURP (No biométrico) - Guinda Oficial
+                            else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
+                                colorHex = "#912F3C"; 
+                                curpHTML = `
+                                    <div class="popup-item">
+                                        <span class="popup-icon">✅</span>
+                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span>
+                                    </div>
+                                `;
+                            } 
+                            // CONDICIÓN C: No tiene nada - Gris Neutro
+                            else {
+                                colorHex = "#A4A4A6"; 
+                                curpHTML = ``; 
+                            }
+
+                            // DIBUJAR EL PIN SVG
+                            const iconoPersonalizado = L.divIcon({
+                                className: 'custom-pin',
+                                html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="45"><path fill="${colorHex}" stroke="#ffffff" stroke-width="2" d="M12 0C5.373 0 0 5.373 0 12c0 8.442 11.144 23.322 11.535 23.82a.597.597 0 00.93 0C12.856 35.322 24 20.442 24 12c0-6.627-5.373-12-12-12zm0 17.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>`,
+                                iconSize: [30, 45],
+                                iconAnchor: [15, 45], 
+                                popupAnchor: [0, -40] 
+                            });
+
+                            const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
+
+                            // Aquí agregamos el enlace de Google Maps en la Dirección
+                            const popupContent = `
+                                <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
+                                <div class="popup-body">
+                                    ${imagenHTML}
+                                    <div class="popup-item">
+                                        <span class="popup-icon">👤</span>
+                                        <span><b>Oficial:</b> ${oficial}</span>
+                                    </div>
+                                    ${curpHTML}
+                                    <div class="popup-item">
+                                        <span class="popup-icon">📍</span>
+                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link" title="Abrir ruta en Google Maps">${direccion}</a></span>
+                                    </div>
+                                    <div class="popup-item">
+                                        <span class="popup-icon">📞</span>
+                                        ${telefonoHTML}
+                                    </div>
+                                    <div class="popup-item">
+                                        <span class="popup-icon">✉️</span>
+                                        <span><a href="mailto:${correo}" class="popup-link">${correo}</a></span>
+                                    </div>
+                                </div>
+                            `;
+
+                            marker.bindPopup(popupContent, {
+                                className: 'custom-popup',
+                                closeButton: true, 
+                                offset: [0, -20]
+                            });
+
+                            marker.on('mouseover', function (e) { this.openPopup(); });
+
+                            grupoOficialias.addLayer(marker);
+                            diccMarcadores[nombre] = marker; 
+
+                            const opcion = document.createElement('option');
+                            opcion.value = nombre;
+                            datalist.appendChild(opcion);
+                        }
+                    });
+
+                    map.on('zoomend', function() {
+                        const zoomActual = map.getZoom();
+                        if (zoomActual >= NIVEL_ZOOM_VISIBLE) {
+                            if (!map.hasLayer(grupoOficialias)) { map.addLayer(grupoOficialias); }
+                        } else {
+                            if (map.hasLayer(grupoOficialias)) { map.removeLayer(grupoOficialias); }
+                        }
+                    });
+
+                    document.getElementById('buscador').addEventListener('input', function(e) {
+                        const seleccion = e.target.value;
+                        const markerEncontrado = diccMarcadores[seleccion]; 
+
+                        if(markerEncontrado) {
+                            const coordenadas = markerEncontrado.getLatLng();
+                            map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 });
+
+                            setTimeout(() => { markerEncontrado.openPopup(); }, 1500);
+                        }
+                    });
+
+                    document.getElementById('btn-reset').addEventListener('click', () => {
+                        map.flyToBounds(veracruzBounds);
+                        document.getElementById('buscador').value = '';
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando el archivo:', error);
+                });
+        });
+    </script>
+</body>
+</html>
