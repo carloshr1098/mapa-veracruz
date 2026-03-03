@@ -8,38 +8,31 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        /* =========================================================
-           2. ESTILOS CSS (EL DISEÑO VISUAL DE LA PÁGINA)
-           ========================================================= */
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; }
         
-        /* --- CABECERA RESPONSIVE CON BUSCADOR INTEGRADO --- */
+        /* --- CABECERA RESPONSIVE --- */
         header { background-color: #6a1b31; color: white; padding: 1rem; text-align: center; height: auto; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        header h1 { margin: 0; font-size: 1.5rem; margin-bottom: 0.5rem; } /* Bajamos un poco el título */
+        header h1 { margin: 0; font-size: 1.5rem; margin-bottom: 0.5rem; } 
         
-        /* El buscador integrado en el header */
-        .header-search { display: none; width: 100%; max-width: 400px; } /* Oculto por defecto, se activa abajo */
+        .header-search { display: none; width: 100%; max-width: 400px; } 
         .header-search input { padding: 10px 15px; font-size: 1rem; border: none; border-radius: 5px; width: 100%; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .header-search input:focus { box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 
-        /* Contenedor principal del mapa */
-        main { height: calc(100vh - 120px); width: 100%; position: relative; } /* Ajustamos la altura por el header más alto */
+        main { height: calc(100vh - 120px); width: 100%; position: relative; } 
         #map-container { height: 100%; width: 100%; z-index: 1; }
         
-        /* Mensaje de carga inicial */
         #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.9); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; font-weight: bold; color: #6a1b31; }
 
-        /* EL BUSCADOR ANTIGUO (Cajón flotante) - LO USAMOS SOLO EN PC */
+        /* EL BUSCADOR PC */
         .pc-search-box { display: none; position: absolute; top: 20px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); flex-direction: column; gap: 10px; }
         .pc-search-box label { color: #6a1b31; font-weight: bold; font-size: 0.9rem; }
         .pc-search-box input { padding: 10px 15px; font-size: 1rem; border: 2px solid #ccc; border-radius: 5px; width: 250px; outline: none; transition: border-color 0.3s; }
         .pc-search-box input:focus { border-color: #6a1b31; }
 
-        /* Botón de "Ver todo Veracruz" */
         #btn-reset { position: absolute; bottom: 30px; left: 20px; z-index: 1000; padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; }
         #btn-reset:hover { background: #8a2542; }
 
-        /* Diseño del globo emergente (Popup) */
+        /* DISEÑO DE LA TARJETA EMERGENTE (Popup) */
         .custom-popup .leaflet-popup-content-wrapper { border-radius: 8px; padding: 0; overflow: hidden; }
         .custom-popup .leaflet-popup-content { margin: 0; width: 280px !important; }
         .popup-header { color: white; padding: 10px 15px; font-size: 1.1em; font-weight: bold; }
@@ -47,32 +40,24 @@
         .popup-item { margin-bottom: 8px; display: flex; align-items: flex-start; }
         .popup-icon { margin-right: 10px; font-size: 1.2em; }
         
-        /* Enlaces para correos, teléfonos y direcciones */
         .popup-link { color: #007bff; text-decoration: none; word-break: break-all; }
         .popup-link:hover { text-decoration: underline; }
         
-        /* Foto circular del Oficial */
         .popup-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #6a1b31; margin: 10px auto 15px auto; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
-        /* Evita que los pines SVG tengan un fondo blanco cuadrado */
         .custom-pin { background: transparent; border: none; }
 
-        /* =========================================================
-           3. MEDIA QUERIES (ADAPTACIÓN DE DISEÑO PC VS MÓVIL)
-           ========================================================= */
-        /* Si la pantalla mide MÁS de 768px (es una computadora) */
+        /* ADAPTACIÓN PC VS MÓVIL */
         @media (min-width: 768px) {
-            header { flex-direction: row; height: 60px; padding: 1rem; } /* Header normal */
-            header h1 { margin: 0; font-size: 1.5rem; margin-right: auto; } /* Título a la izquierda */
-            .header-search { display: none; } /* Ocultamos el buscador integrado */
-            main { height: calc(100vh - 60px); } /* Altura del mapa normal */
-            .pc-search-box { display: flex; } /* Activamos el cajón flotante antiguo */
+            header { flex-direction: row; height: 60px; padding: 1rem; } 
+            header h1 { margin: 0; font-size: 1.5rem; margin-right: auto; } 
+            .header-search { display: none; } 
+            main { height: calc(100vh - 60px); } 
+            .pc-search-box { display: flex; } 
         }
 
-        /* Si la pantalla mide MENOS de 768px (es un celular) */
         @media (max-width: 767px) {
-            .header-search { display: block; } /* Activamos el buscador integrado arriba */
-            .pc-search-box { display: none; } /* Ocultamos el cajón flotante */
+            .header-search { display: block; } 
+            .pc-search-box { display: none; } 
         }
     </style>
 </head>
@@ -93,9 +78,7 @@
         </div>
 
         <button id="btn-reset">🗺️ Ver todo Veracruz</button>
-
         <div id="loading">Cargando mapa oficial de Veracruz...</div>
-        
         <div id="map-container"></div>
     </main>
 
@@ -104,25 +87,17 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // =========================================================
-            // 5. INICIALIZACIÓN DEL MAPA
-            // =========================================================
             const map = L.map('map-container', { minZoom: 6, maxZoom: 18 });
 
-            // Capa base de las calles
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OSM'
             }).addTo(map);
 
-            // Variables globales
             let veracruzBounds;  
             const grupoOficialias = L.layerGroup(); 
             const NIVEL_ZOOM_VISIBLE = 10; 
             let diccMarcadores = {}; 
 
-            // =========================================================
-            // 6. TRAZAR EL POLÍGONO DEL ESTADO
-            // =========================================================
             const urlPoligonoVeracruz = 'https://nominatim.openstreetmap.org/search?state=Veracruz&country=Mexico&polygon_geojson=1&format=json';
 
             fetch(urlPoligonoVeracruz)
@@ -140,9 +115,6 @@
                 })
                 .catch(error => { console.error("Error al cargar el polígono:", error); });
 
-            // =========================================================
-            // 7. PROCESAMIENTO DE DATOS DEL EXCEL (JSON)
-            // =========================================================
             fetch('csvjson.json')
                 .then(response => response.json())
                 .then(datos => {
@@ -152,7 +124,6 @@
                         const nombre = item.MUNICIPIO || item.municipio;
                         const direccion = item.DIRECCION || item.direccion || "Sin dirección";
                         
-                        // --- A. LIMPIEZA DEL TELÉFONO ---
                         let telefonoRaw = item.telefono || item.Telefono || "No disponible";
                         let telefonoDisplay = String(telefonoRaw).replace(/\n/g, '<br>'); 
                         let soloNumeros = String(telefonoRaw).replace(/\D/g, ''); 
@@ -164,11 +135,9 @@
                             telefonoHTML = `<span>${telefonoDisplay}</span>`;
                         }
 
-                        // --- B. EXTRACCIÓN DE DATOS SIMPLES ---
                         const oficial = item.OFICIAL || item.Oficial || item.oficial || "Oficial no asignado";
                         const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
                         
-                        // --- C. EXTRACCIÓN DE LA FOTO (FLICKR) ---
                         let fotoTexto = item.FOTO || item.Foto || item.foto || "";
                         let imagenHTML = "";
                         if (fotoTexto !== "" && fotoTexto.toLowerCase() !== "sin foto") {
@@ -179,7 +148,6 @@
                             imagenHTML = `<img src="${fotoTexto}" alt="Foto de ${oficial}" class="popup-avatar" onerror="this.style.display='none'">`;
                         }
 
-                        // --- D. LECTURA DE COORDENADAS ---
                         let lat, lng;
                         const textoCoordenada = item.Coordenadas || item.coordenadas || item.Latitude || item.Longitude || item.COORDENADAS;
                         
@@ -194,17 +162,13 @@
 
                         if(nombre && lat && lng && !isNaN(lat) && !isNaN(lng)) {
                             
-                            // =========================================================================
-                            // 8. LÓGICA DE SERVICIOS: COLORES Y EMOJIS (ACTUALIZADO)
-                            // =========================================================================
-                            
                             let tieneCurp = String(item["MODULO CURP"] || item["Modulo CURP"] || item.curp || "NO").trim().toUpperCase();
                             let tieneBiometrico = String(item["BIOMETRICO"] || item["Biometrico"] || item.biometrico || "NO").trim().toUpperCase();
 
                             let colorHex = "";     
                             let curpHTML = "";     
 
-                            // ESCENARIO 1: Tiene TODO (Dorado y Check + Ojo)
+                            // ESCENARIO 1: Tiene TODO
                             if (tieneCurp === "SI" && tieneBiometrico === "SI") {
                                 colorHex = "#BD9556"; 
                                 curpHTML = `
@@ -218,7 +182,7 @@
                                     </div>
                                 `;
                             } 
-                            // ESCENARIO 2: Solo CURP (Guinda Oficial)
+                            // ESCENARIO 2: Solo CURP 
                             else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
                                 colorHex = "#912F3C"; 
                                 curpHTML = `
@@ -228,13 +192,12 @@
                                     </div>
                                 `;
                             } 
-                            // ESCENARIO 3: Nada de servicios (Gris neutro)
+                            // ESCENARIO 3: Nada 
                             else {
                                 colorHex = "#606062"; 
                                 curpHTML = ``; 
                             }
 
-                            // 9. DIBUJAR EL PIN SVG
                             const iconoPersonalizado = L.divIcon({
                                 className: 'custom-pin',
                                 html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="45"><path fill="${colorHex}" stroke="#ffffff" stroke-width="2" d="M12 0C5.373 0 0 5.373 0 12c0 8.442 11.144 23.322 11.535 23.82a.597.597 0 00.93 0C12.856 35.322 24 20.442 24 12c0-6.627-5.373-12-12-12zm0 17.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>`,
@@ -245,8 +208,7 @@
 
                             const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
 
-                            // 10. ARMAR EL GLOBO DE INFORMACIÓN (Popup)
-                            // El enlace de Google Maps ya funciona sin API Key
+                            // Aquí está el enlace corregido (Trazar ruta de Google Maps)
                             const popupContent = `
                                 <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
                                 <div class="popup-body">
@@ -258,7 +220,7 @@
                                     ${curpHTML}
                                     <div class="popup-item">
                                         <span class="popup-icon">📍</span>
-                                        <span><a href="https://http://googleusercontent.com/maps?q=loc:{lat},${lng}" target="_blank" class="popup-link" title="Abrir ruta en Google Maps">${direccion}</a></span>
+                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link" title="Abrir ruta en Google Maps">${direccion}</a></span>
                                     </div>
                                     <div class="popup-item">
                                         <span class="popup-icon">📞</span>
@@ -277,23 +239,17 @@
                                 offset: [0, -20]
                             });
 
-                            // Abrir globo al pasar mouse (solo PC)
                             marker.on('mouseover', function (e) { this.openPopup(); });
 
-                            // Guardar datos
                             grupoOficialias.addLayer(marker);
                             diccMarcadores[nombre] = marker; 
 
-                            // Llenar sugerencias datalist (solo PC)
                             const opcion = document.createElement('option');
                             opcion.value = nombre;
                             datalist.appendChild(opcion);
                         }
                     });
 
-                    // =========================================================
-                    // 11. CÁMARA: Zoom dinámico
-                    // =========================================================
                     map.on('zoomend', function() {
                         const zoomActual = map.getZoom();
                         if (zoomActual >= NIVEL_ZOOM_VISIBLE) {
@@ -303,16 +259,12 @@
                         }
                     });
 
-                    // =========================================================
-                    // 12. EL CEREBRO DE LA BÚSQUEDA (MEJORADO Y EXPLICADO)
-                    // =========================================================
-                    
-                    // La función "cerebro": toma un texto de búsqueda y vuela hacia el municipio
                     function ejecutarBusqueda(textoBusqueda) {
+                        if(!textoBusqueda) return;
+                        
                         const seleccionLimpia = textoBusqueda.trim().toLowerCase(); 
                         let markerEncontrado = null;
                         
-                        // Busca en el diccionario ignorando mayúsculas/minúsculas
                         for (const nombreMunicipio in diccMarcadores) {
                             if (nombreMunicipio.toLowerCase() === seleccionLimpia) {
                                 markerEncontrado = diccMarcadores[nombreMunicipio];
@@ -320,42 +272,31 @@
                             }
                         }
 
-                        // Si lo encuentra
                         if(markerEncontrado) {
                             const coordenadas = markerEncontrado.getLatLng();
-                            map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 }); // Vuela
+                            map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 }); 
+                            
+                            // Si estamos en celular, esto quita el teclado
+                            if(document.activeElement) document.activeElement.blur(); 
 
-                            // Cierra el teclado del celular quitando el "foco" del input
-                            document.activeElement.blur(); 
-
-                            setTimeout(() => { markerEncontrado.openPopup(); }, 1500); // Abre popup al aterrizar
+                            setTimeout(() => { markerEncontrado.openPopup(); }, 1500); 
                         }
                     }
 
-                    // --- BUSCADOR DEL HEADER (Celulares) ---
-                    // En móvil, la búsqueda inteligente se ejecuta de dos formas:
-                    
-                    // A. Al presionar "Ir/Enter" en el teclado
                     document.getElementById('buscador-header').addEventListener('keyup', (e) => {
                         if (e.key === 'Enter') {
                             ejecutarBusqueda(e.target.value);
                         }
                     });
 
-                    // B. Al tocar fuera de la barra de búsqueda o presionar "Done"
                     document.getElementById('buscador-header').addEventListener('blur', (e) => {
                         ejecutarBusqueda(e.target.value);
                     });
 
-                    // --- BUSCADOR DEL CAJÓN FLOANTE (PC) ---
-                    // En PC, mantenemos la búsqueda nativa (input + datalist) para que cargue al seleccionar
                     document.getElementById('buscador-pc').addEventListener('input', (e) => {
                         ejecutarBusqueda(e.target.value);
                     });
 
-                    // =========================================================
-                    // 13. BOTÓN "VER TODO VERACRUZ"
-                    // =========================================================
                     document.getElementById('btn-reset').addEventListener('click', () => {
                         map.flyToBounds(veracruzBounds);
                         document.getElementById('buscador-pc').value = '';
