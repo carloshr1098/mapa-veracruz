@@ -124,16 +124,40 @@
                         const nombre = item.MUNICIPIO || item.municipio;
                         const direccion = item.DIRECCION || item.direccion || "Sin dirección";
                         
+                        // =========================================================================
+                        // --- A. LIMPIEZA INTELIGENTE DE MÚLTIPLES TELÉFONOS ---
+                        // =========================================================================
                         let telefonoRaw = item.telefono || item.Telefono || "No disponible";
-                        let telefonoDisplay = String(telefonoRaw).replace(/\n/g, '<br>'); 
-                        let soloNumeros = String(telefonoRaw).replace(/\D/g, ''); 
                         let telefonoHTML = "";
-                        
-                        if (soloNumeros.length >= 7) {
-                            telefonoHTML = `<a href="tel:${soloNumeros}" class="popup-link">${telefonoDisplay}</a>`;
+
+                        // Si dice "NO TIENE", lo dejamos como texto muerto
+                        if (String(telefonoRaw).toUpperCase().includes("NO TIENE") || telefonoRaw === "No disponible") {
+                            telefonoHTML = `<span>${telefonoRaw}</span>`;
                         } else {
-                            telefonoHTML = `<span>${telefonoDisplay}</span>`;
+                            // Partimos el texto usando comas, diagonales, saltos de línea, o la letra "y"
+                            let listaTelefonos = String(telefonoRaw).split(/[\n/,]| y | Y | o | O /);
+                            let enlacesGenerados = [];
+
+                            // Analizamos cada pedacito que separamos
+                            listaTelefonos.forEach(tel => {
+                                let telLimpio = tel.trim();
+                                if (telLimpio.length > 0) {
+                                    let soloNumeros = telLimpio.replace(/\D/g, ''); 
+                                    
+                                    // Si tiene al menos 7 dígitos, es un teléfono real y creamos su botón de llamada
+                                    if (soloNumeros.length >= 7) {
+                                        enlacesGenerados.push(`<a href="tel:${soloNumeros}" class="popup-link" style="display: block; margin-bottom: 3px;">${telLimpio}</a>`);
+                                    } else {
+                                        // Si es una extensión o texto raro, lo dejamos como texto normal
+                                        enlacesGenerados.push(`<span style="display: block; margin-bottom: 3px;">${telLimpio}</span>`);
+                                    }
+                                }
+                            });
+                            
+                            // Unimos todos los teléfonos encontrados
+                            telefonoHTML = enlacesGenerados.join('');
                         }
+                        // =========================================================================
 
                         const oficial = item.OFICIAL || item.Oficial || item.oficial || "Oficial no asignado";
                         const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
@@ -168,7 +192,6 @@
                             let colorHex = "";     
                             let curpHTML = "";     
 
-                            // ESCENARIO 1: Tiene TODO
                             if (tieneCurp === "SI" && tieneBiometrico === "SI") {
                                 colorHex = "#BD9556"; 
                                 curpHTML = `
@@ -181,9 +204,7 @@
                                         <span style="color: ${colorHex}; font-weight: bold;">Módulo Biométrico</span>
                                     </div>
                                 `;
-                            } 
-                            // ESCENARIO 2: Solo CURP 
-                            else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
+                            } else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
                                 colorHex = "#912F3C"; 
                                 curpHTML = `
                                     <div class="popup-item">
@@ -191,9 +212,7 @@
                                         <span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span>
                                     </div>
                                 `;
-                            } 
-                            // ESCENARIO 3: Nada 
-                            else {
+                            } else {
                                 colorHex = "#606062"; 
                                 curpHTML = ``; 
                             }
@@ -208,7 +227,6 @@
 
                             const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
 
-                            // ¡ENLACE CORREGIDO! Usa la API de rutas de Google Maps
                             const popupContent = `
                                 <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
                                 <div class="popup-body">
@@ -224,7 +242,7 @@
                                     </div>
                                     <div class="popup-item">
                                         <span class="popup-icon">📞</span>
-                                        ${telefonoHTML}
+                                        <div>${telefonoHTML}</div>
                                     </div>
                                     <div class="popup-item">
                                         <span class="popup-icon">✉️</span>
