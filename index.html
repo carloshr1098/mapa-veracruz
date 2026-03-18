@@ -124,42 +124,36 @@
                         const nombre = item.MUNICIPIO || item.municipio;
                         const direccion = item.DIRECCION || item.direccion || "Sin dirección";
                         
-                        // =========================================================================
-                        // --- A. LIMPIEZA INTELIGENTE DE MÚLTIPLES TELÉFONOS ---
-                        // =========================================================================
+                        // --- LIMPIEZA DE TELÉFONOS ---
                         let telefonoRaw = item.telefono || item.Telefono || "No disponible";
                         let telefonoHTML = "";
 
-                        // Si dice "NO TIENE", lo dejamos como texto muerto
                         if (String(telefonoRaw).toUpperCase().includes("NO TIENE") || telefonoRaw === "No disponible") {
                             telefonoHTML = `<span>${telefonoRaw}</span>`;
                         } else {
-                            // Partimos el texto usando comas, diagonales, saltos de línea, o la letra "y"
                             let listaTelefonos = String(telefonoRaw).split(/[\n/,]| y | Y | o | O /);
                             let enlacesGenerados = [];
-
-                            // Analizamos cada pedacito que separamos
                             listaTelefonos.forEach(tel => {
                                 let telLimpio = tel.trim();
                                 if (telLimpio.length > 0) {
                                     let soloNumeros = telLimpio.replace(/\D/g, ''); 
-                                    
-                                    // Si tiene al menos 7 dígitos, es un teléfono real y creamos su botón de llamada
                                     if (soloNumeros.length >= 7) {
                                         enlacesGenerados.push(`<a href="tel:${soloNumeros}" class="popup-link" style="display: block; margin-bottom: 3px;">${telLimpio}</a>`);
                                     } else {
-                                        // Si es una extensión o texto raro, lo dejamos como texto normal
                                         enlacesGenerados.push(`<span style="display: block; margin-bottom: 3px;">${telLimpio}</span>`);
                                     }
                                 }
                             });
-                            
-                            // Unimos todos los teléfonos encontrados
                             telefonoHTML = enlacesGenerados.join('');
                         }
-                        // =========================================================================
 
-                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Oficial no asignado";
+                        // --- EXCEPCIÓN PARA LA DIRECCIÓN GENERAL ---
+                        let etiquetaResponsable = "Oficial";
+                        if (nombre === "DIRECCION GENERAL DEL REGISTRO CIVIL") {
+                            etiquetaResponsable = "Directora General";
+                        }
+
+                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Responsable no asignado";
                         const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
                         
                         let fotoTexto = item.FOTO || item.Foto || item.foto || "";
@@ -169,49 +163,27 @@
                                 const match = fotoTexto.match(/src="([^"]+)"/);
                                 if (match) fotoTexto = match[1];
                             }
-                            imagenHTML = `<img src="${fotoTexto}" alt="Foto de ${oficial}" class="popup-avatar" onerror="this.style.display='none'">`;
+                            imagenHTML = `<img src="${fotoTexto}" alt="Foto" class="popup-avatar" onerror="this.style.display='none'">`;
                         }
 
-                        let lat, lng;
-                        const textoCoordenada = item.Coordenadas || item.coordenadas || item.Latitude || item.Longitude || item.COORDENADAS;
-                        
-                        if (textoCoordenada && typeof textoCoordenada === 'string' && textoCoordenada.includes(',')) {
-                            const partes = textoCoordenada.split(',');
-                            lat = parseFloat(partes[0].trim());
-                            lng = parseFloat(partes[1].trim());
-                        } else {
-                            lat = parseFloat(item.Latitude || item.lat);
-                            lng = parseFloat(item.Longitude || item.lng);
-                        }
+                        let lat = parseFloat(item.Latitude || item.lat);
+                        let lng = parseFloat(item.Longitude || item.lng);
 
-                        if(nombre && lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                        if(nombre && !isNaN(lat) && !isNaN(lng)) {
                             
-                            let tieneCurp = String(item["MODULO CURP"] || item["Modulo CURP"] || item.curp || "NO").trim().toUpperCase();
-                            let tieneBiometrico = String(item["BIOMETRICO"] || item["Biometrico"] || item.biometrico || "NO").trim().toUpperCase();
+                            let tieneCurp = String(item["MODULO CURP"] || "NO").trim().toUpperCase();
+                            let tieneBiometrico = String(item["BIOMETRICO"] || "NO").trim().toUpperCase();
 
                             let colorHex = "";     
                             let curpHTML = "";     
 
                             if (tieneCurp === "SI" && tieneBiometrico === "SI") {
                                 colorHex = "#BD9556"; 
-                                curpHTML = `
-                                    <div class="popup-item">
-                                        <span class="popup-icon">✅</span>
-                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span>
-                                    </div>
-                                    <div class="popup-item">
-                                        <span class="popup-icon">👁️</span>
-                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo Biométrico</span>
-                                    </div>
-                                `;
+                                curpHTML = `<div class="popup-item"><span class="popup-icon">✅</span><span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span></div>
+                                            <div class="popup-item"><span class="popup-icon">👁️</span><span style="color: ${colorHex}; font-weight: bold;">Módulo Biométrico</span></div>`;
                             } else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
                                 colorHex = "#912F3C"; 
-                                curpHTML = `
-                                    <div class="popup-item">
-                                        <span class="popup-icon">✅</span>
-                                        <span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span>
-                                    </div>
-                                `;
+                                curpHTML = `<div class="popup-item"><span class="popup-icon">✅</span><span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span></div>`;
                             } else {
                                 colorHex = "#606062"; 
                                 curpHTML = ``; 
@@ -220,9 +192,7 @@
                             const iconoPersonalizado = L.divIcon({
                                 className: 'custom-pin',
                                 html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="45"><path fill="${colorHex}" stroke="#ffffff" stroke-width="2" d="M12 0C5.373 0 0 5.373 0 12c0 8.442 11.144 23.322 11.535 23.82a.597.597 0 00.93 0C12.856 35.322 24 20.442 24 12c0-6.627-5.373-12-12-12zm0 17.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>`,
-                                iconSize: [30, 45],
-                                iconAnchor: [15, 45], 
-                                popupAnchor: [0, -40] 
+                                iconSize: [30, 45], iconAnchor: [15, 45], popupAnchor: [0, -40] 
                             });
 
                             const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
@@ -233,12 +203,12 @@
                                     ${imagenHTML}
                                     <div class="popup-item">
                                         <span class="popup-icon">👤</span>
-                                        <span><b>Oficial:</b> ${oficial}</span>
+                                        <span><b>${etiquetaResponsable}:</b> ${oficial}</span>
                                     </div>
                                     ${curpHTML}
                                     <div class="popup-item">
                                         <span class="popup-icon">📍</span>
-                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link" title="Cómo llegar en Google Maps">${direccion}</a></span>
+                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link">${direccion}</a></span>
                                     </div>
                                     <div class="popup-item">
                                         <span class="popup-icon">📞</span>
@@ -248,15 +218,9 @@
                                         <span class="popup-icon">✉️</span>
                                         <span><a href="mailto:${correo}" class="popup-link">${correo}</a></span>
                                     </div>
-                                </div>
-                            `;
+                                </div>`;
 
-                            marker.bindPopup(popupContent, {
-                                className: 'custom-popup',
-                                closeButton: true, 
-                                offset: [0, -20]
-                            });
-
+                            marker.bindPopup(popupContent, { className: 'custom-popup', offset: [0, -20] });
                             marker.on('mouseover', function (e) { this.openPopup(); });
 
                             grupoOficialias.addLayer(marker);
@@ -269,8 +233,7 @@
                     });
 
                     map.on('zoomend', function() {
-                        const zoomActual = map.getZoom();
-                        if (zoomActual >= NIVEL_ZOOM_VISIBLE) {
+                        if (map.getZoom() >= NIVEL_ZOOM_VISIBLE) {
                             if (!map.hasLayer(grupoOficialias)) { map.addLayer(grupoOficialias); }
                         } else {
                             if (map.hasLayer(grupoOficialias)) { map.removeLayer(grupoOficialias); }
@@ -279,49 +242,25 @@
 
                     function ejecutarBusqueda(textoBusqueda) {
                         if(!textoBusqueda) return;
-                        
                         const seleccionLimpia = textoBusqueda.trim().toLowerCase(); 
                         let markerEncontrado = null;
-                        
                         for (const nombreMunicipio in diccMarcadores) {
                             if (nombreMunicipio.toLowerCase() === seleccionLimpia) {
                                 markerEncontrado = diccMarcadores[nombreMunicipio];
                                 break; 
                             }
                         }
-
                         if(markerEncontrado) {
-                            const coordenadas = markerEncontrado.getLatLng();
-                            map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 }); 
-                            
+                            map.flyTo(markerEncontrado.getLatLng(), 15, { animate: true, duration: 1.5 }); 
                             if(document.activeElement) document.activeElement.blur(); 
-
                             setTimeout(() => { markerEncontrado.openPopup(); }, 1500); 
                         }
                     }
 
-                    document.getElementById('buscador-header').addEventListener('keyup', (e) => {
-                        if (e.key === 'Enter') {
-                            ejecutarBusqueda(e.target.value);
-                        }
-                    });
-
-                    document.getElementById('buscador-header').addEventListener('blur', (e) => {
-                        ejecutarBusqueda(e.target.value);
-                    });
-
-                    document.getElementById('buscador-pc').addEventListener('input', (e) => {
-                        ejecutarBusqueda(e.target.value);
-                    });
-
-                    document.getElementById('btn-reset').addEventListener('click', () => {
-                        map.flyToBounds(veracruzBounds);
-                        document.getElementById('buscador-pc').value = '';
-                        document.getElementById('buscador-header').value = '';
-                    });
-                })
-                .catch(error => {
-                    console.error('Error cargando el archivo:', error);
+                    document.getElementById('buscador-header').addEventListener('keyup', (e) => { if (e.key === 'Enter') ejecutarBusqueda(e.target.value); });
+                    document.getElementById('buscador-header').addEventListener('blur', (e) => ejecutarBusqueda(e.target.value));
+                    document.getElementById('buscador-pc').addEventListener('input', (e) => ejecutarBusqueda(e.target.value));
+                    document.getElementById('btn-reset').addEventListener('click', () => map.flyToBounds(veracruzBounds));
                 });
         });
     </script>
