@@ -29,13 +29,16 @@
         .pc-search-box input { padding: 10px 15px; font-size: 1rem; border: 2px solid #ccc; border-radius: 5px; width: 250px; outline: none; transition: border-color 0.3s; }
         .pc-search-box input:focus { border-color: #6a1b31; }
 
-        /* --- NUEVA CAJA DE FILTROS --- */
-        #filtros-box { position: absolute; bottom: 85px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; }
-        #filtros-box h3 { margin: 0 0 5px 0; font-size: 0.95rem; color: #6a1b31; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 5px;}
+        /* --- CONTROLES FLOTANTES (Filtros y Botón) --- */
+        .controles-mapa { position: absolute; bottom: 30px; left: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        
+        #filtros-box { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; }
+        #filtros-box h3 { margin: 0; font-size: 0.95rem; color: #6a1b31; text-align: center; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        .filtros-opciones { display: flex; flex-direction: column; gap: 10px; margin-top: 5px;}
         .filtro-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; color: #333; font-weight: bold; }
         .filtro-label input { accent-color: #6a1b31; transform: scale(1.3); cursor: pointer;}
 
-        #btn-reset { position: absolute; bottom: 30px; left: 20px; z-index: 1000; padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; width: calc(100% - 40px); max-width: 200px; text-align: center;}
+        #btn-reset { padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; text-align: center; }
         #btn-reset:hover { background: #8a2542; }
 
         /* DISEÑO DE LA TARJETA EMERGENTE (Popup) */
@@ -52,20 +55,34 @@
         .popup-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #6a1b31; margin: 10px auto 15px auto; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .custom-pin { background: transparent; border: none; }
 
-        /* ADAPTACIÓN PC VS MÓVIL */
+        /* --- ADAPTACIÓN PC VS MÓVIL --- */
         @media (min-width: 768px) {
             header { flex-direction: row; height: 60px; padding: 1rem; } 
             header h1 { margin: 0; font-size: 1.5rem; margin-right: auto; } 
             .header-search { display: none; } 
             main { height: calc(100vh - 60px); } 
             .pc-search-box { display: flex; } 
-            #btn-reset { max-width: none; width: auto; }
         }
 
         @media (max-width: 767px) {
             .header-search { display: block; } 
             .pc-search-box { display: none; } 
-            #filtros-box { bottom: 90px; }
+            
+            /* Ajuste responsivo de la caja inferior para celular */
+            .controles-mapa { 
+                bottom: 20px; 
+                left: 50%; 
+                transform: translateX(-50%); 
+                width: 90%; 
+                max-width: 380px; 
+            }
+            .filtros-opciones { 
+                flex-direction: row; /* Lado a lado en celular */
+                justify-content: space-around; 
+                margin-top: 0;
+            }
+            .filtro-label { font-size: 0.85rem; }
+            #btn-reset { width: 100%; padding: 10px; font-size: 0.95rem; }
         }
     </style>
 </head>
@@ -85,17 +102,21 @@
             <datalist id="lista-municipios"></datalist>
         </div>
 
-        <div id="filtros-box">
-            <h3>Filtros Rápidos</h3>
-            <label class="filtro-label">
-                <input type="checkbox" id="chk-curp"> ✅ Módulo CURP
-            </label>
-            <label class="filtro-label">
-                <input type="checkbox" id="chk-bio"> 👁️ Módulo Biométrico
-            </label>
+        <div class="controles-mapa">
+            <div id="filtros-box">
+                <h3>Filtros Rápidos</h3>
+                <div class="filtros-opciones">
+                    <label class="filtro-label">
+                        <input type="checkbox" id="chk-curp"> ✅ Módulo CURP
+                    </label>
+                    <label class="filtro-label">
+                        <input type="checkbox" id="chk-bio"> 👁️ Módulo Biométrico
+                    </label>
+                </div>
+            </div>
+            <button id="btn-reset">🗺️ Ver todo Veracruz</button>
         </div>
 
-        <button id="btn-reset">🗺️ Ver todo Veracruz</button>
         <div id="loading">Cargando mapa oficial de Veracruz...</div>
         <div id="map-container"></div>
     </main>
@@ -116,7 +137,6 @@
             const NIVEL_ZOOM_VISIBLE = 10; 
             let diccMarcadores = {}; 
             
-            // --- NUEVO: Arreglo para guardar TODOS los marcadores y poder filtrarlos ---
             const todosLosMarcadores = []; 
 
             const urlPoligonoVeracruz = 'https://nominatim.openstreetmap.org/search?state=Veracruz&country=Mexico&polygon_geojson=1&format=json';
@@ -158,7 +178,6 @@
                                 let telLimpio = tel.trim();
                                 if (telLimpio.length > 0) {
                                     let soloNumeros = telLimpio.replace(/\D/g, ''); 
-                                    
                                     if (soloNumeros.length >= 7) {
                                         enlacesGenerados.push(`<a href="tel:${soloNumeros}" class="popup-link" style="display: block; margin-bottom: 3px;">${telLimpio}</a>`);
                                     } else {
@@ -166,7 +185,6 @@
                                     }
                                 }
                             });
-                            
                             telefonoHTML = enlacesGenerados.join('');
                         }
 
@@ -194,22 +212,13 @@
                                 const match = fotoTexto.match(/src="([^"]+)"/);
                                 if (match) fotoTexto = match[1];
                             }
-                            imagenHTML = `<img src="${fotoTexto}" alt="Foto de ${oficial}" class="popup-avatar" onerror="this.style.display='none'">`;
+                            imagenHTML = `<img src="${fotoTexto}" class="popup-avatar" onerror="this.style.display='none'">`;
                         }
 
-                        let lat, lng;
-                        const textoCoordenada = item.Coordenadas || item.coordenadas || item.Latitude || item.Longitude || item.COORDENADAS;
-                        
-                        if (textoCoordenada && typeof textoCoordenada === 'string' && textoCoordenada.includes(',')) {
-                            const partes = textoCoordenada.split(',');
-                            lat = parseFloat(partes[0].trim());
-                            lng = parseFloat(partes[1].trim());
-                        } else {
-                            lat = parseFloat(item.Latitude || item.lat);
-                            lng = parseFloat(item.Longitude || item.lng);
-                        }
+                        let lat = parseFloat(item.Latitude || item.lat);
+                        let lng = parseFloat(item.Longitude || item.lng);
 
-                        if(nombre && lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                        if(nombre && !isNaN(lat) && !isNaN(lng)) {
                             
                             let tieneCurp = String(item["MODULO CURP"] || item["Modulo CURP"] || item.curp || "NO").trim().toUpperCase();
                             let tieneBiometrico = String(item["BIOMETRICO"] || item["Biometrico"] || item.biometrico || "NO").trim().toUpperCase();
@@ -284,7 +293,6 @@
                             grupoOficialias.addLayer(marker);
                             diccMarcadores[nombre] = marker; 
 
-                            // --- NUEVO: Guardamos toda la data del marcador en nuestro arreglo ---
                             todosLosMarcadores.push({
                                 marcador: marker,
                                 tieneCurp: tieneCurp === "SI",
@@ -303,13 +311,11 @@
                         const reqCurp = document.getElementById('chk-curp').checked;
                         const reqBio = document.getElementById('chk-bio').checked;
 
-                        grupoOficialias.clearLayers(); // Vaciamos el mapa temporalmente
+                        grupoOficialias.clearLayers(); 
 
                         todosLosMarcadores.forEach(item => {
                             let pasaFiltro = true;
-                            // Si el usuario pide CURP y la oficialía no tiene, se oculta
                             if (reqCurp && !item.tieneCurp) pasaFiltro = false;
-                            // Si el usuario pide Biométrico y la oficialía no tiene, se oculta
                             if (reqBio && !item.tieneBio) pasaFiltro = false;
 
                             if (pasaFiltro) {
@@ -318,7 +324,6 @@
                         });
                     }
 
-                    // Escuchamos cuando el usuario marque o desmarque las casillas
                     document.getElementById('chk-curp').addEventListener('change', aplicarFiltros);
                     document.getElementById('chk-bio').addEventListener('change', aplicarFiltros);
 
@@ -346,7 +351,6 @@
                         }
 
                         if(markerEncontrado) {
-                            // --- MAGIA NUEVA: Si el marcador estaba oculto por un filtro, lo forzamos a aparecer ---
                             if (!grupoOficialias.hasLayer(markerEncontrado)) {
                                 grupoOficialias.addLayer(markerEncontrado);
                             }
@@ -379,7 +383,7 @@
                         document.getElementById('buscador-pc').value = '';
                         document.getElementById('buscador-header').value = '';
                         
-                        // --- NUEVO: Limpiamos los filtros visualmente y en el mapa ---
+                        // Limpiamos los filtros al resetear
                         document.getElementById('chk-curp').checked = false;
                         document.getElementById('chk-bio').checked = false;
                         aplicarFiltros();
