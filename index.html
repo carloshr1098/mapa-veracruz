@@ -46,7 +46,6 @@
         .popup-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #6a1b31; margin: 10px auto 15px auto; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .custom-pin { background: transparent; border: none; }
 
-        /* ADAPTACIÓN PC VS MÓVIL */
         @media (min-width: 768px) {
             header { flex-direction: row; height: 60px; padding: 1rem; } 
             header h1 { margin: 0; font-size: 1.5rem; margin-right: auto; } 
@@ -112,8 +111,7 @@
                     veracruzBounds = geoJsonLayer.getBounds();
                     map.fitBounds(veracruzBounds);
                     map.setMaxBounds(veracruzBounds.pad(0.2)); 
-                })
-                .catch(error => { console.error("Error al cargar el polígono:", error); });
+                });
 
             fetch('csvjson.json')
                 .then(response => response.json())
@@ -124,10 +122,9 @@
                         const nombre = item.MUNICIPIO || item.municipio;
                         const direccion = item.DIRECCION || item.direccion || "Sin dirección";
                         
-                        // --- LIMPIEZA DE TELÉFONOS ---
+                        // --- TELÉFONOS ---
                         let telefonoRaw = item.telefono || item.Telefono || "No disponible";
                         let telefonoHTML = "";
-
                         if (String(telefonoRaw).toUpperCase().includes("NO TIENE") || telefonoRaw === "No disponible") {
                             telefonoHTML = `<span>${telefonoRaw}</span>`;
                         } else {
@@ -147,119 +144,89 @@
                             telefonoHTML = enlacesGenerados.join('');
                         }
 
-                        // --- EXCEPCIÓN PARA LA DIRECCIÓN GENERAL ---
+                        // --- EXCEPCIONES PARA DIRECCIÓN GENERAL ---
                         let etiquetaResponsable = "Oficial";
+                        let correoRaw = item.CORREO || item.Correo || "";
+                        let correoHTML = "";
+
                         if (nombre === "DIRECCION GENERAL DEL REGISTRO CIVIL") {
                             etiquetaResponsable = "Directora General";
+                            // Ocultar fila de correo si está vacío o dice "Sin correo"
+                            if (correoRaw && correoRaw.toLowerCase() !== "sin correo" && correoRaw.trim() !== "") {
+                                correoHTML = `<div class="popup-item"><span class="popup-icon">✉️</span><span><a href="mailto:${correoRaw}" class="popup-link">${correoRaw}</a></span></div>`;
+                            }
+                        } else {
+                            // Para el resto, mostrar normal o la leyenda
+                            let textoCorreo = (correoRaw === "" || correoRaw.toLowerCase() === "sin correo") ? "Sin correo" : correoRaw;
+                            correoHTML = `<div class="popup-item"><span class="popup-icon">✉️</span><span><a href="mailto:${textoCorreo}" class="popup-link">${textoCorreo}</a></span></div>`;
                         }
 
-                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Responsable no asignado";
-                        const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
-                        
-                        let fotoTexto = item.FOTO || item.Foto || item.foto || "";
+                        const oficial = item.OFICIAL || item.Oficial || "Responsable no asignado";
+                        let fotoTexto = item.FOTO || item.Foto || "";
                         let imagenHTML = "";
                         if (fotoTexto !== "" && fotoTexto.toLowerCase() !== "sin foto") {
                             if (fotoTexto.includes('src="')) {
                                 const match = fotoTexto.match(/src="([^"]+)"/);
                                 if (match) fotoTexto = match[1];
                             }
-                            imagenHTML = `<img src="${fotoTexto}" alt="Foto" class="popup-avatar" onerror="this.style.display='none'">`;
+                            imagenHTML = `<img src="${fotoTexto}" class="popup-avatar" onerror="this.style.display='none'">`;
                         }
 
                         let lat = parseFloat(item.Latitude || item.lat);
                         let lng = parseFloat(item.Longitude || item.lng);
 
                         if(nombre && !isNaN(lat) && !isNaN(lng)) {
-                            
                             let tieneCurp = String(item["MODULO CURP"] || "NO").trim().toUpperCase();
-                            let tieneBiometrico = String(item["BIOMETRICO"] || "NO").trim().toUpperCase();
+                            let tieneBio = String(item["BIOMETRICO"] || "NO").trim().toUpperCase();
+                            let colorHex = (tieneCurp === "SI" && tieneBio === "SI") ? "#BD9556" : (tieneCurp === "SI" ? "#912F3C" : "#606062");
 
-                            let colorHex = "";     
-                            let curpHTML = "";     
-
-                            if (tieneCurp === "SI" && tieneBiometrico === "SI") {
-                                colorHex = "#BD9556"; 
-                                curpHTML = `<div class="popup-item"><span class="popup-icon">✅</span><span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span></div>
-                                            <div class="popup-item"><span class="popup-icon">👁️</span><span style="color: ${colorHex}; font-weight: bold;">Módulo Biométrico</span></div>`;
-                            } else if (tieneCurp === "SI" && tieneBiometrico !== "SI") {
-                                colorHex = "#912F3C"; 
-                                curpHTML = `<div class="popup-item"><span class="popup-icon">✅</span><span style="color: ${colorHex}; font-weight: bold;">Módulo CURP</span></div>`;
-                            } else {
-                                colorHex = "#606062"; 
-                                curpHTML = ``; 
-                            }
-
-                            const iconoPersonalizado = L.divIcon({
+                            const icono = L.divIcon({
                                 className: 'custom-pin',
                                 html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="45"><path fill="${colorHex}" stroke="#ffffff" stroke-width="2" d="M12 0C5.373 0 0 5.373 0 12c0 8.442 11.144 23.322 11.535 23.82a.597.597 0 00.93 0C12.856 35.322 24 20.442 24 12c0-6.627-5.373-12-12-12zm0 17.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>`,
                                 iconSize: [30, 45], iconAnchor: [15, 45], popupAnchor: [0, -40] 
                             });
 
-                            const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
+                            const marker = L.marker([lat, lng], { icon: icono });
 
                             const popupContent = `
                                 <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
                                 <div class="popup-body">
                                     ${imagenHTML}
-                                    <div class="popup-item">
-                                        <span class="popup-icon">👤</span>
-                                        <span><b>${etiquetaResponsable}:</b> ${oficial}</span>
-                                    </div>
-                                    ${curpHTML}
-                                    <div class="popup-item">
-                                        <span class="popup-icon">📍</span>
-                                        <span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link">${direccion}</a></span>
-                                    </div>
-                                    <div class="popup-item">
-                                        <span class="popup-icon">📞</span>
-                                        <div>${telefonoHTML}</div>
-                                    </div>
-                                    <div class="popup-item">
-                                        <span class="popup-icon">✉️</span>
-                                        <span><a href="mailto:${correo}" class="popup-link">${correo}</a></span>
-                                    </div>
+                                    <div class="popup-item"><span class="popup-icon">👤</span><span><b>${etiquetaResponsable}:</b> ${oficial}</span></div>
+                                    <div class="popup-item"><span class="popup-icon">📍</span><span><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="popup-link">${direccion}</a></span></div>
+                                    <div class="popup-item"><span class="popup-icon">📞</span><div>${telefonoHTML}</div></div>
+                                    ${correoHTML}
                                 </div>`;
 
                             marker.bindPopup(popupContent, { className: 'custom-popup', offset: [0, -20] });
-                            marker.on('mouseover', function (e) { this.openPopup(); });
+                            marker.on('mouseover', function () { this.openPopup(); });
 
                             grupoOficialias.addLayer(marker);
                             diccMarcadores[nombre] = marker; 
-
                             const opcion = document.createElement('option');
                             opcion.value = nombre;
                             datalist.appendChild(opcion);
                         }
                     });
 
-                    map.on('zoomend', function() {
-                        if (map.getZoom() >= NIVEL_ZOOM_VISIBLE) {
-                            if (!map.hasLayer(grupoOficialias)) { map.addLayer(grupoOficialias); }
-                        } else {
-                            if (map.hasLayer(grupoOficialias)) { map.removeLayer(grupoOficialias); }
-                        }
+                    map.on('zoomend', () => {
+                        if (map.getZoom() >= NIVEL_ZOOM_VISIBLE) map.addLayer(grupoOficialias);
+                        else map.removeLayer(grupoOficialias);
                     });
 
-                    function ejecutarBusqueda(textoBusqueda) {
-                        if(!textoBusqueda) return;
-                        const seleccionLimpia = textoBusqueda.trim().toLowerCase(); 
-                        let markerEncontrado = null;
-                        for (const nombreMunicipio in diccMarcadores) {
-                            if (nombreMunicipio.toLowerCase() === seleccionLimpia) {
-                                markerEncontrado = diccMarcadores[nombreMunicipio];
+                    function buscar(val) {
+                        const sel = val.trim().toLowerCase(); 
+                        for (let n in diccMarcadores) {
+                            if (n.toLowerCase() === sel) {
+                                map.flyTo(diccMarcadores[n].getLatLng(), 15);
+                                setTimeout(() => { diccMarcadores[n].openPopup(); }, 1500);
                                 break; 
                             }
                         }
-                        if(markerEncontrado) {
-                            map.flyTo(markerEncontrado.getLatLng(), 15, { animate: true, duration: 1.5 }); 
-                            if(document.activeElement) document.activeElement.blur(); 
-                            setTimeout(() => { markerEncontrado.openPopup(); }, 1500); 
-                        }
                     }
 
-                    document.getElementById('buscador-header').addEventListener('keyup', (e) => { if (e.key === 'Enter') ejecutarBusqueda(e.target.value); });
-                    document.getElementById('buscador-header').addEventListener('blur', (e) => ejecutarBusqueda(e.target.value));
-                    document.getElementById('buscador-pc').addEventListener('input', (e) => ejecutarBusqueda(e.target.value));
+                    document.getElementById('buscador-header').addEventListener('keyup', (e) => { if (e.key === 'Enter') buscar(e.target.value); });
+                    document.getElementById('buscador-pc').addEventListener('input', (e) => buscar(e.target.value));
                     document.getElementById('btn-reset').addEventListener('click', () => map.flyToBounds(veracruzBounds));
                 });
         });
