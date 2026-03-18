@@ -29,7 +29,13 @@
         .pc-search-box input { padding: 10px 15px; font-size: 1rem; border: 2px solid #ccc; border-radius: 5px; width: 250px; outline: none; transition: border-color 0.3s; }
         .pc-search-box input:focus { border-color: #6a1b31; }
 
-        #btn-reset { position: absolute; bottom: 30px; left: 20px; z-index: 1000; padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; }
+        /* --- NUEVA CAJA DE FILTROS --- */
+        #filtros-box { position: absolute; bottom: 85px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; }
+        #filtros-box h3 { margin: 0 0 5px 0; font-size: 0.95rem; color: #6a1b31; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 5px;}
+        .filtro-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; color: #333; font-weight: bold; }
+        .filtro-label input { accent-color: #6a1b31; transform: scale(1.3); cursor: pointer;}
+
+        #btn-reset { position: absolute; bottom: 30px; left: 20px; z-index: 1000; padding: 12px 20px; background: #6a1b31; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background 0.3s; width: calc(100% - 40px); max-width: 200px; text-align: center;}
         #btn-reset:hover { background: #8a2542; }
 
         /* DISEÑO DE LA TARJETA EMERGENTE (Popup) */
@@ -53,11 +59,13 @@
             .header-search { display: none; } 
             main { height: calc(100vh - 60px); } 
             .pc-search-box { display: flex; } 
+            #btn-reset { max-width: none; width: auto; }
         }
 
         @media (max-width: 767px) {
             .header-search { display: block; } 
             .pc-search-box { display: none; } 
+            #filtros-box { bottom: 90px; }
         }
     </style>
 </head>
@@ -75,6 +83,16 @@
             <label for="buscador-pc">Buscar Oficialía:</label>
             <input type="text" id="buscador-pc" placeholder="Escribe un municipio..." list="lista-municipios" autocomplete="off">
             <datalist id="lista-municipios"></datalist>
+        </div>
+
+        <div id="filtros-box">
+            <h3>Filtros Rápidos</h3>
+            <label class="filtro-label">
+                <input type="checkbox" id="chk-curp"> ✅ Solo Módulo CURP
+            </label>
+            <label class="filtro-label">
+                <input type="checkbox" id="chk-bio"> 👁️ Solo Módulo Biométrico
+            </label>
         </div>
 
         <button id="btn-reset">🗺️ Ver todo Veracruz</button>
@@ -97,6 +115,9 @@
             const grupoOficialias = L.layerGroup(); 
             const NIVEL_ZOOM_VISIBLE = 10; 
             let diccMarcadores = {}; 
+            
+            // --- NUEVO: Arreglo para guardar TODOS los marcadores y poder filtrarlos ---
+            const todosLosMarcadores = []; 
 
             const urlPoligonoVeracruz = 'https://nominatim.openstreetmap.org/search?state=Veracruz&country=Mexico&polygon_geojson=1&format=json';
 
@@ -124,9 +145,6 @@
                         const nombre = item.MUNICIPIO || item.municipio;
                         const direccion = item.DIRECCION || item.direccion || "Sin dirección";
                         
-                        // =========================================================================
-                        // --- A. LIMPIEZA INTELIGENTE DE MÚLTIPLES TELÉFONOS ---
-                        // =========================================================================
                         let telefonoRaw = item.telefono || item.Telefono || "No disponible";
                         let telefonoHTML = "";
 
@@ -151,10 +169,23 @@
                             
                             telefonoHTML = enlacesGenerados.join('');
                         }
-                        // =========================================================================
 
-                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Oficial no asignado";
-                        const correo = item.CORREO || item.Correo || item.correo || item.EMAIL || item.email || "Sin correo";
+                        // --- EXCEPCIONES PARA DIRECCIÓN GENERAL ---
+                        let etiquetaResponsable = "Oficial";
+                        let correoRaw = item.CORREO || item.Correo || "";
+                        let correoHTML = "";
+
+                        if (nombre === "DIRECCION GENERAL DEL REGISTRO CIVIL") {
+                            etiquetaResponsable = "Directora General";
+                            if (correoRaw && correoRaw.toLowerCase() !== "sin correo" && correoRaw.trim() !== "") {
+                                correoHTML = `<div class="popup-item"><span class="popup-icon">✉️</span><span><a href="mailto:${correoRaw}" class="popup-link">${correoRaw}</a></span></div>`;
+                            }
+                        } else {
+                            let textoCorreo = (correoRaw === "" || correoRaw.toLowerCase() === "sin correo") ? "Sin correo" : correoRaw;
+                            correoHTML = `<div class="popup-item"><span class="popup-icon">✉️</span><span><a href="mailto:${textoCorreo}" class="popup-link">${textoCorreo}</a></span></div>`;
+                        }
+
+                        const oficial = item.OFICIAL || item.Oficial || item.oficial || "Responsable no asignado";
                         
                         let fotoTexto = item.FOTO || item.Foto || item.foto || "";
                         let imagenHTML = "";
@@ -221,23 +252,6 @@
 
                             const marker = L.marker([lat, lng], { icon: iconoPersonalizado });
 
-                            // =====================================================================
-                            // --- EXCEPCIÓN DIRECCIÓN GENERAL ---
-                            // =====================================================================
-                            let etiquetaResponsable = "Oficial";
-                            let seccionCorreo = `
-                                <div class="popup-item">
-                                    <span class="popup-icon">✉️</span>
-                                    <span><a href="mailto:${correo}" class="popup-link">${correo}</a></span>
-                                </div>
-                            `;
-
-                            if (nombre === "DIRECCION GENERAL DEL REGISTRO CIVIL") {
-                                etiquetaResponsable = "Directora General";
-                                seccionCorreo = ""; // Lo vaciamos para que no aparezca nada de correo
-                            }
-                            // =====================================================================
-
                             const popupContent = `
                                 <div class="popup-header" style="background-color: ${colorHex};">${nombre}</div>
                                 <div class="popup-body">
@@ -255,7 +269,7 @@
                                         <span class="popup-icon">📞</span>
                                         <div>${telefonoHTML}</div>
                                     </div>
-                                    ${seccionCorreo}
+                                    ${correoHTML}
                                 </div>
                             `;
 
@@ -270,11 +284,44 @@
                             grupoOficialias.addLayer(marker);
                             diccMarcadores[nombre] = marker; 
 
+                            // --- NUEVO: Guardamos toda la data del marcador en nuestro arreglo ---
+                            todosLosMarcadores.push({
+                                marcador: marker,
+                                tieneCurp: tieneCurp === "SI",
+                                tieneBio: tieneBiometrico === "SI",
+                                nombre: nombre
+                            });
+
                             const opcion = document.createElement('option');
                             opcion.value = nombre;
                             datalist.appendChild(opcion);
                         }
                     });
+
+                    // --- FUNCIÓN DE FILTRADO ---
+                    function aplicarFiltros() {
+                        const reqCurp = document.getElementById('chk-curp').checked;
+                        const reqBio = document.getElementById('chk-bio').checked;
+
+                        grupoOficialias.clearLayers(); // Vaciamos el mapa temporalmente
+
+                        todosLosMarcadores.forEach(item => {
+                            let pasaFiltro = true;
+                            // Si el usuario pide CURP y la oficialía no tiene, se oculta
+                            if (reqCurp && !item.tieneCurp) pasaFiltro = false;
+                            // Si el usuario pide Biométrico y la oficialía no tiene, se oculta
+                            if (reqBio && !item.tieneBio) pasaFiltro = false;
+
+                            if (pasaFiltro) {
+                                grupoOficialias.addLayer(item.marcador);
+                            }
+                        });
+                    }
+
+                    // Escuchamos cuando el usuario marque o desmarque las casillas
+                    document.getElementById('chk-curp').addEventListener('change', aplicarFiltros);
+                    document.getElementById('chk-bio').addEventListener('change', aplicarFiltros);
+
 
                     map.on('zoomend', function() {
                         const zoomActual = map.getZoom();
@@ -299,6 +346,11 @@
                         }
 
                         if(markerEncontrado) {
+                            // --- MAGIA NUEVA: Si el marcador estaba oculto por un filtro, lo forzamos a aparecer ---
+                            if (!grupoOficialias.hasLayer(markerEncontrado)) {
+                                grupoOficialias.addLayer(markerEncontrado);
+                            }
+
                             const coordenadas = markerEncontrado.getLatLng();
                             map.flyTo(coordenadas, 15, { animate: true, duration: 1.5 }); 
                             
@@ -326,6 +378,11 @@
                         map.flyToBounds(veracruzBounds);
                         document.getElementById('buscador-pc').value = '';
                         document.getElementById('buscador-header').value = '';
+                        
+                        // --- NUEVO: Limpiamos los filtros visualmente y en el mapa ---
+                        document.getElementById('chk-curp').checked = false;
+                        document.getElementById('chk-bio').checked = false;
+                        aplicarFiltros();
                     });
                 })
                 .catch(error => {
